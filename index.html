@@ -124,7 +124,8 @@ const FONTS = {
 // Word's highlight palette (Verbatim highlights with Word's w:highlight, so these are its colors).
 const WORD = {yellow:"#ffff00",green:"#00ff00",cyan:"#00ffff",magenta:"#ff00ff",blue:"#0000ff",red:"#ff0000",darkBlue:"#000080",darkCyan:"#008080",darkGreen:"#008000",darkMagenta:"#800080",darkRed:"#800000",darkYellow:"#808000",darkGray:"#808080",lightGray:"#c0c0c0",black:"#000000",white:"#ffffff"};
 const SWATCHES = [["yellow","Yellow"],["green","Green"],["cyan","Blue"],["magenta","Pink"]];
-const LENS = [-50,100,200,0]; // negative = at most N highlighted words, 0 = any length, positive = within ±25%
+const ATLEAST = 1000; // a value of ATLEAST + N means "N or more"
+const LENS = [-50,100,200,ATLEAST + 250,0]; // negative = at most N highlighted words, 0 = any length, 1..999 = within ±25%, ATLEAST + N = N or more
 const DOCS = [
   {id:"afro", name:"Afropessimism K Aff and Neg (Northwestern 2026)", file:"docs/afropessimism-k-northwestern-2026.docx"},
   {id:"cap",  name:"Capitalism K Aff and Neg (Northwestern 2026)",    file:"docs/capitalism-k-northwestern-2026.docx"},
@@ -191,15 +192,15 @@ function mkCard(target){
 }
 async function getCard(target){
   if(LIB.length) return pickLib(target);
-  const min = Math.round(target * .9), max = Math.round(target * 1.1);
+  const min = Math.round(target * .9), max = Math.round(target * 1.1); // only used for "within ±10%" lengths
   if(API_BASE){
     try{
-      const q = target < 0 ? `?max_words=${-target}` : target ? `?min_words=${min}&max_words=${max}` : "";
+      const q = target < 0 ? `?max_words=${-target}` : target >= ATLEAST ? `?min_words=${target - ATLEAST}` : target ? `?min_words=${min}&max_words=${max}` : "";
       const r = await fetch(`${API_BASE}/random${q}`);
       if(r.ok) return normalize(await r.json());
     }catch(e){}
   }
-  return normalize(mkCard(target < 0 ? 20 + (Math.random() * (-target - 29) | 0) : target || 60 + (Math.random() * 440 | 0)));
+  return normalize(mkCard(target < 0 ? 20 + (Math.random() * (-target - 29) | 0) : target >= ATLEAST ? target - ATLEAST + (Math.random() * 120 | 0) : target || 60 + (Math.random() * 440 | 0)));
 }
 
 // ---- Rendering ----
@@ -437,7 +438,11 @@ async function selectDoc(id){
 }
 function pickLib(target){
   let pool;
-  if(target < 0){
+  if(target >= ATLEAST){
+    const m = target - ATLEAST; pool = LIB.filter(c => c.words >= m);
+    if(pool.length) srcNote = `${pool.length} with ${m} words or more.`;
+    else{ pool = [...LIB].sort((a, b) => b.words - a.words).slice(0, 3); srcNote = `None with ${m} words or more, using the longest.`; }
+  }else if(target < 0){
     pool = LIB.filter(c => c.words <= -target);
     if(pool.length) srcNote = `${pool.length} with ${-target} words or fewer.`;
     else{ pool = [...LIB].sort((a, b) => a.words - b.words).slice(0, 3); srcNote = `None with ${-target} words or fewer, using the shortest.`; }
@@ -477,7 +482,7 @@ $("doc").onchange = e => { selectDoc(e.target.value); e.target.blur(); };
 document.addEventListener("dragover", e => e.preventDefault());
 document.addEventListener("drop", e => { e.preventDefault(); if(e.dataTransfer.files.length) addFiles([...e.dataTransfer.files]); });
 for(const n of LENS){
-  const b = document.createElement("button"); b.className = "chip"; b.dataset.n = n; b.textContent = n < 0 ? "≤" + -n : n || "any";
+  const b = document.createElement("button"); b.className = "chip"; b.dataset.n = n; b.textContent = n < 0 ? "≤" + -n : n >= ATLEAST ? (n - ATLEAST) + "+" : n || "any";
   b.onclick = () => { S.len = n; b.blur(); applySettings(); loadCard(); }; $("lens").append(b);
 }
 for(const [k,v] of Object.entries(FONTS)){ const o = document.createElement("option"); o.value = k; o.textContent = v[0]; $("font").append(o); }
