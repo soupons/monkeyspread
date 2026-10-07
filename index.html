@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>monkeyspread</title>
+<style>
+:root{--bg:#f4f4f0;--panel:#e8e8e2;--fg:#26262a;--muted:#7a7a74;--dim:#9a9a92;--accent:#b8860b;--line:#d6d6ce;
+--hl:#ffe14d;--hl-text:#111;--font:Calibri,Carlito,Arial,sans-serif;--size:22px;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1f2023;--panel:#2a2b2f;--fg:#d1d0c5;--muted:#7c7e82;--dim:#686a6e;--accent:#e2b714;--line:#3a3b40}}
+:root[data-theme="dark"]{--bg:#1f2023;--panel:#2a2b2f;--fg:#d1d0c5;--muted:#7c7e82;--dim:#686a6e;--accent:#e2b714;--line:#3a3b40}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:20px 18px 60px}
+.wrap[data-layout="web"]{max-width:none}
+.wrap[data-layout="print"]{max-width:900px}
+.doc{display:flex;align-items:center;gap:8px;flex:1 1 240px;min-width:0;max-width:460px}
+.doc select{flex:1;min-width:0;text-overflow:ellipsis}
+.hdr-r{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+a.chip{text-decoration:none;display:inline-block}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font:600 22px/1 system-ui,sans-serif;margin:0;letter-spacing:-.01em}
+.muted{color:var(--muted)}
+.bar{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;background:var(--panel);border-radius:10px;padding:10px 14px;margin:18px 0 26px}
+.grp{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.grp>span{color:var(--muted)}
+button,select,input{font:inherit;color:inherit}
+.chip{background:none;border:0;padding:3px 9px;border-radius:6px;color:var(--muted);cursor:pointer}
+.chip.up{border:1px solid var(--line)}
+.chip:hover{color:var(--fg)}.chip.on{color:var(--bg);background:var(--accent)}
+select,input[type=number]{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 6px}
+input[type=number]{width:70px}
+input[type=color]{width:30px;height:24px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer}
+.sw{width:18px;height:18px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.meta{scroll-margin-top:12px;display:flex;align-items:baseline;gap:14px;margin-bottom:10px;color:var(--accent)}
+.count{font-size:34px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.timer{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--muted)}
+.card{font-family:var(--font);font-size:var(--size);line-height:1.6;transition:filter .15s;background:var(--pbg);color:var(--pfg);padding:1em 1.3em;border:1px solid var(--line);border-radius:6px}
+.cardbox{position:relative;max-width:100%;margin:0 auto}
+.cardbox[data-layout="print"]{width:816px}
+.cardbox[data-layout="print"] .grip{display:none}
+.card[data-layout="print"]{padding:96px;box-shadow:0 2px 14px rgba(0,0,0,.25)}
+.grip{position:absolute;top:0;bottom:0;width:18px;cursor:ew-resize;touch-action:none;z-index:2}
+.grip.l{left:-9px}.grip.r{right:-9px}
+.grip::after{content:"";position:absolute;top:50%;left:50%;width:4px;height:52px;margin:-26px 0 0 -2px;border-radius:4px;background:var(--accent);opacity:.3;transition:opacity .15s}
+.grip:hover::after,.grip.drag::after{opacity:1}
+body.clickmode .card{cursor:pointer;user-select:none}
+body.dragging{user-select:none;cursor:ew-resize}
+@media (max-width:860px){.card[data-layout="print"]{padding:48px 36px}}
+.card[data-paper="light"]{--pbg:#fff;--pfg:#000;--pmuted:#595959}
+.card[data-paper="dark"]{--pbg:#191919;--pfg:#fff;--pmuted:#a6a6a6}
+.card.idle{filter:blur(9px);user-select:none}
+.card h2{font:inherit;font-weight:700;margin:0 0 .35em}
+.card .cite{font-size:.8em;color:var(--pmuted);margin:0 0 1em}
+.card .cite .b{font-weight:700;color:var(--pfg)}
+.card p{margin:0 0 .8em}
+.card .un{color:var(--pfg)}
+.card .fmt{font-size:0;line-height:0;margin:0}
+.card .cite.fmt{color:var(--pfg)}
+.hl{background:var(--hl);color:var(--hl-text);border-radius:2px;padding:0 .08em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.totop{text-align:center;margin-top:18px}
+.hint{margin:22px 0;text-align:center;color:var(--muted)}
+kbd{background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:1px 7px;font:inherit;font-size:.9em}
+.res{border-top:1px solid var(--line);padding-top:18px;display:flex;flex-wrap:wrap;gap:8px 36px;align-items:baseline}
+.res .big{font-size:48px;font-weight:600;color:var(--accent);line-height:1}
+.res small{display:block;color:var(--muted)}
+.recent{width:100%;color:var(--muted);font-variant-numeric:tabular-nums}
+.link{background:none;border:0;color:var(--muted);cursor:pointer;text-decoration:underline;padding:0}
+</style>
+</head>
+<body>
+<div class="wrap" data-layout="web">
+<header><h1>monkeyspread</h1>
+<label class="doc"><span class="muted">document</span><select id="doc" aria-label="Document to pull cards from"></select></label><div class="hdr-r"><span class="muted"><span id="sess">no cards read yet</span> <button class="link" id="reset" hidden>clear runs</button></span><a class="chip up" id="repo" href="https://github.com/soupons/monkeyspread" target="_blank" rel="noopener noreferrer" title="Source code on GitHub">GitHub</a></div></header>
+
+<section class="bar" aria-label="Settings">
+ <div class="grp" id="lens"><span>length</span></div>
+ <div class="grp"><span>font</span><select id="font" aria-label="Font"></select></div>
+ <div class="grp"><span>size</span><input type="range" id="size" min="14" max="48" aria-label="Font size"><span id="sizeV"></span></div>
+ <div class="grp" id="hlg"><span>highlight</span></div>
+ <div class="grp" id="layout"><span>view</span><button class="chip" data-v="web" title="Word web layout: text fills the window">web</button><button class="chip" data-v="print" title="Word print layout: 8.5 x 11 in page with 1 in margins">print</button></div>
+ <div class="grp" id="paper"><span>page</span><button class="chip" data-p="light">light</button><button class="chip" data-p="dark">dark</button></div>
+ <div class="grp" id="ctl"><span>start/stop</span><button class="chip" data-m="click" title="Click or tap the document area to start, stop and go to the next card">click card</button><button class="chip" data-m="space" title="Space bar only">space only</button></div>
+ <div class="grp"><span>cards</span><button class="chip up" id="up">upload .docx</button><button class="chip" id="clr" hidden>clear</button>
+  <input type="file" id="file" accept=".docx" multiple hidden><span id="src" class="muted"></span></div>
+</section>
+
+<div class="meta" id="meta"><span class="count" id="count">0</span><span>highlighted words</span><span class="timer" id="timer"></span></div>
+
+<div class="cardbox" id="cardbox" data-layout="web">
+<article class="card idle" id="card" data-paper="light" data-layout="web" aria-live="off"><h2 id="tag"></h2><p class="cite" id="cite"></p><div id="body"></div></article>
+<div class="grip l" title="Drag to resize · double-click to reset"></div><div class="grip r" title="Drag to resize · double-click to reset"></div>
+</div>
+<div class="totop"><button class="chip up" id="toTop">↑ back to top</button></div>
+<p class="hint" id="hint"></p>
+
+<section class="res" id="res" hidden>
+ <div><span class="big" id="rWpm">0</span><small>words per minute</small></div>
+ <div><b id="rWords"></b><small>words</small></div>
+ <div><b id="rTime"></b><small>seconds</small></div>
+ <div class="recent" id="recent"></div>
+</section>
+<p class="muted" style="margin-top:30px"><span id="mode"></span></p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+// ---- Config: point this at the Flask backend (needs a /random route) when you run it yourself. ----
+const API_BASE = ""; // e.g. "http://localhost:5000". Empty = demo mode with generated filler text.
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const FONTS = {
+  calibri:["Calibri","Calibri,Carlito,Arial,sans-serif"], arial:["Arial","Arial,Helvetica,sans-serif"],
+  georgia:["Georgia","Georgia,'Times New Roman',serif"], times:["Times New Roman","'Times New Roman',Times,serif"],
+  comic:["Comic Sans","'Comic Sans MS','Comic Sans','Chalkboard SE','Comic Neue',cursive"],
+  mono:["Monospace","ui-monospace,Menlo,Consolas,'Courier New',monospace"], system:["System UI","system-ui,-apple-system,'Segoe UI',sans-serif"]
+};
+// Word's highlight palette (Verbatim highlights with Word's w:highlight, so these are its colors).
+const WORD = {yellow:"#ffff00",green:"#00ff00",cyan:"#00ffff",magenta:"#ff00ff",blue:"#0000ff",red:"#ff0000",darkBlue:"#000080",darkCyan:"#008080",darkGreen:"#008000",darkMagenta:"#800080",darkRed:"#800000",darkYellow:"#808000",darkGray:"#808080",lightGray:"#c0c0c0",black:"#000000",white:"#ffffff"};
+const SWATCHES = [["yellow","Yellow"],["green","Green"],["cyan","Blue"],["magenta","Pink"]];
+const LENS = [-50,100,200,0]; // negative = at most N highlighted words, 0 = any length, positive = within ±25%
+const DOCS = [
+  {id:"afro", name:"Afropessimism K Aff and Neg (Northwestern 2026)", file:"docs/afropessimism-k-northwestern-2026.docx"},
+  {id:"cap",  name:"Capitalism K Aff and Neg (Northwestern 2026)",    file:"docs/capitalism-k-northwestern-2026.docx"},
+  {id:"econ", name:"Econ DA (DDI 2026)",                              file:"docs/econ-da-ddi-2026.docx"},
+  {id:"sp",   name:"1AC Single Payer Final (DDI 2026 GL)",            file:"docs/1ac-single-payer-ddi-2026.docx"}
+];
+let S = Object.assign({len:200, font:"calibri", size:22, hl:"#ffff00", paper:"light", layout:"web", webW:0, ctl:"click", doc:"econ"}, store.get("spread.settings", {}));
+if(!DOCS.some(d => d.id === S.doc)) S.doc = "econ"; // uploads are not kept between visits
+if(!LENS.includes(S.len)) S.len = 100;
+if(!SWATCHES.some(([k]) => WORD[k] === S.hl)) S.hl = WORD.yellow;
+if(S.paper !== "dark") S.paper = "light";
+if(S.layout !== "print") S.layout = "web";
+if(S.ctl !== "space") S.ctl = "click";
+S.webW = +S.webW > 0 ? +S.webW : 0; // 0 = full window width
+let H = store.get("spread.history", []);
+let card = null, state = "idle", t0 = 0, tick = null, loadId = 0, loading = false;
+
+// ---- Card model. Backend card: {tag, cite, cite_emphasis, body:[para], highlights:[[p_index,start,end]]} ----
+// verbatim-parser stores p_index starting at 2 for the first paragraph after the cite, so body index = p_index - 2.
+function normalize(c){
+  const paras = c.body.map(t => ({text:t, ranges:[]}));
+  for(const [p,s,e] of c.highlights){ const q = paras[p-2]; if(q) q.ranges.push([s,e]); }
+  return {tag:c.tag, cite:c.cite, citeBold:c.cite_emphasis || [], paras};
+}
+const inRanges = (r,i,j) => r.some(([s,e]) => i < e && j > s);
+// A word counts if any of its characters is highlighted (handles words split across Word runs).
+function countWords(c){
+  let n = 0;
+  for(const p of c.paras) for(const m of p.text.matchAll(/\S+/g)) if(inRanges(p.ranges, m.index, m.index + m[0].length)) n++;
+  return n;
+}
+
+// ---- Card source: backend if configured, otherwise generated filler in the same format ----
+const POOL = [
+ "Empirical studies of municipal broadband programs consistently find that subsidized access narrows the participation gap among low-income households within two years of rollout.",
+ "However, the same analyses caution that infrastructure alone does not produce durable gains unless it is paired with digital literacy training and local technical support.",
+ "Critics of centralized planning argue that regional authorities possess better information about local conditions than any national agency could realistically gather.",
+ "The causal chain from lower transaction costs to higher small business formation is well documented across a broad set of developing economies.",
+ "Even under conservative assumptions about adoption rates, the projected savings exceed the upfront capital expenditure by a substantial margin over a decade.",
+ "Our evidence indicates that regulatory uncertainty, rather than the level of taxation, is the primary deterrent to long-term private investment in the sector.",
+ "A growing body of peer-reviewed research suggests that urban tree canopy reduces peak summer temperatures by several degrees in dense neighborhoods.",
+ "Policymakers frequently overlook that maintenance obligations scale faster than construction budgets, leaving many flagship projects underfunded within a generation.",
+ "The comparative record shows that coalition governments tend to pass fewer sweeping reforms but sustain the reforms they do pass for longer periods.",
+ "Because supply chains are tightly coupled, a disruption at a single chokepoint can propagate through dozens of downstream industries within weeks.",
+ "Survey data from multiple countries reveal that public trust in institutions rises measurably when decision making processes are made transparent and auditable.",
+ "No single intervention explains the observed decline; rather, the improvement reflects overlapping changes in funding, enforcement, and community level organizing.",
+ "Independent auditors found that the program's headline savings were overstated because they ignored administrative costs borne by participating agencies.",
+ "Retrospective evaluations are more reliable than forecasts, which routinely understate how quickly new technologies diffuse once prices fall below a critical threshold."
+];
+function mkCard(target){
+  const body = [], highlights = []; let n = 0, pi = 2;
+  while(n < target){
+    let para = "";
+    for(let k = 0; k < 5 && n < target; k++){
+      const s = POOL[Math.random() * POOL.length | 0], toks = [...s.matchAll(/\S+/g)];
+      const len = Math.min(toks.length, 4 + (Math.random() * 7 | 0)), a = Math.random() * (toks.length - len + 1) | 0;
+      const st = toks[a].index, last = toks[a + len - 1];
+      highlights.push([pi, para.length + st, para.length + last.index + last[0].length]);
+      n += len; para += s + " ";
+    }
+    body.push(para.trimEnd()); pi++;
+  }
+  return {tag:"Sample card (generated filler)", cite:"Placeholder '26, upload a formatted docx file for more", cite_emphasis:[[0,15]], body, highlights};
+}
+async function getCard(target){
+  if(LIB.length) return pickLib(target);
+  const min = Math.round(target * .9), max = Math.round(target * 1.1);
+  if(API_BASE){
+    try{
+      const q = target < 0 ? `?max_words=${-target}` : target ? `?min_words=${min}&max_words=${max}` : "";
+      const r = await fetch(`${API_BASE}/random${q}`);
+      if(r.ok) return normalize(await r.json());
+    }catch(e){}
+  }
+  return normalize(mkCard(target < 0 ? 20 + (Math.random() * (-target - 29) | 0) : target || 60 + (Math.random() * 440 | 0)));
+}
+
+// ---- Rendering ----
+function span(t, c){ const s = document.createElement("span"); s.textContent = t; if(c) s.className = c; return s; }
+function merge(r){
+  r = [...r].sort((a,b) => a[0] - b[0]); const o = [];
+  for(const x of r){ const l = o[o.length-1]; if(l && x[0] <= l[1] && x[2] === l[2]) l[1] = Math.max(l[1], x[1]); else o.push([x[0], x[1], x[2]]); }
+  return o;
+}
+function fill(el, text, ranges, on, off){
+  el.textContent = ""; let pos = 0;
+  for(const r of merge(ranges)){
+    const [s,e] = r; if(s > pos) el.append(span(text.slice(pos, s), off));
+    const sp = span(text.slice(s, e), on);
+    if(on === "hl" && S.hl === "file" && WORD[r[2]]){ sp.style.background = WORD[r[2]]; sp.style.color = lum(WORD[r[2]]) > .55 ? "#111" : "#fff"; }
+    el.append(sp); pos = e;
+  }
+  if(pos < text.length) el.append(span(text.slice(pos), off));
+}
+function fillRuns(el, text, runs, gap){
+  el.textContent = ""; el.classList.add("fmt"); el.style.marginBottom = `calc(var(--size) * ${(gap / 11).toFixed(3)})`;
+  for(const r of runs){
+    const sp = span(text.slice(r.s, r.e), r.hl ? "hl" : ""), st = sp.style;
+    st.fontSize = `calc(var(--size) * ${(r.pt / 11).toFixed(4)})`; st.lineHeight = "1.3"; // sizes come from the file; --size is the 11pt text
+    if(r.b) st.fontWeight = "700"; if(r.i) st.fontStyle = "italic"; if(r.u) st.textDecoration = "underline"; if(r.box) st.border = "1px solid currentColor";
+    el.append(sp);
+  }
+}
+function renderCard(){
+  $("tag").textContent = card.tag; $("tag").style.fontSize = card.fmt ? "1.1818em" : ""; // Tag style is 13pt
+  const ci = $("cite"); ci.className = "cite"; ci.style.marginBottom = "";
+  if(card.fmt) fillRuns(ci, card.cite, card.citeRuns, card.gap); else fill(ci, card.cite, card.citeBold, "b", "");
+  const b = $("body"); b.textContent = "";
+  for(const p of card.paras){ const el = document.createElement("p"); if(card.fmt) fillRuns(el, p.text, p.runs, card.gap); else fill(el, p.text, p.ranges, "hl", "un"); b.append(el); }
+  $("count").textContent = card.words;
+}
+
+// ---- Settings ----
+function lum(h){ const n = parseInt(h.slice(1), 16); return (.299 * (n >> 16) + .587 * (n >> 8 & 255) + .114 * (n & 255)) / 255; }
+function applySettings(){
+  const r = document.documentElement.style;
+  r.setProperty("--font", FONTS[S.font][1]); r.setProperty("--size", S.size + "px");
+  const base = S.hl === "file" ? "#ffff00" : S.hl;
+  r.setProperty("--hl", base); r.setProperty("--hl-text", "#000");
+  $("size").value = S.size; $("sizeV").textContent = S.size + "px"; $("font").value = S.font;
+  document.querySelectorAll(".sw").forEach(b => b.style.borderColor = b.dataset.c === S.hl ? "var(--fg)" : "transparent");
+  $("card").dataset.paper = S.paper; $("card").dataset.layout = S.layout; $("cardbox").dataset.layout = S.layout; $("cardbox").style.width = S.layout === "web" && S.webW ? S.webW + "px" : ""; document.querySelector(".wrap").dataset.layout = S.layout;
+  document.querySelectorAll("#layout .chip").forEach(b => b.classList.toggle("on", b.dataset.v === S.layout));
+  document.querySelectorAll("#ctl .chip").forEach(b => b.classList.toggle("on", b.dataset.m === S.ctl));
+  document.body.classList.toggle("clickmode", S.ctl === "click"); setHint();
+  document.querySelectorAll("#paper .chip").forEach(b => b.classList.toggle("on", b.dataset.p === S.paper));
+  document.querySelectorAll("#lens .chip").forEach(b => b.classList.toggle("on", +b.dataset.n === S.len));
+  store.set("spread.settings", S);
+  if(card) renderCard();
+}
+
+// Web layout: drag the card's left or right edge to set its width (symmetric around the center); double-click an edge to reset to full width.
+document.querySelectorAll(".grip").forEach(g => {
+  const dir = g.classList.contains("l") ? -1 : 1;
+  g.addEventListener("pointerdown", e => {
+    e.preventDefault(); g.setPointerCapture(e.pointerId); g.classList.add("drag"); document.body.classList.add("dragging");
+    const box = $("cardbox"), x0 = e.clientX, w0 = box.getBoundingClientRect().width, max = box.parentElement.clientWidth - 36;
+    const move = ev => {
+      let w = Math.round(w0 + 2 * dir * (ev.clientX - x0)); w = Math.max(320, Math.min(max, w));
+      S.webW = w >= max - 12 ? 0 : w; box.style.width = S.webW ? S.webW + "px" : "";
+    };
+    const up = () => { g.removeEventListener("pointermove", move); g.removeEventListener("pointerup", up); g.removeEventListener("pointercancel", up);
+      g.classList.remove("drag"); document.body.classList.remove("dragging"); store.set("spread.settings", S); };
+    g.addEventListener("pointermove", move); g.addEventListener("pointerup", up); g.addEventListener("pointercancel", up);
+  });
+  g.addEventListener("dblclick", () => { S.webW = 0; applySettings(); });
+});
+
+// Click mode: only clicks on the document area count. The settings bar, resize handles and page background are ignored.
+let lastClick = 0;
+$("card").addEventListener("mousedown", e => { if(S.ctl === "click") e.preventDefault(); });
+$("card").addEventListener("click", e => {
+  if(S.ctl !== "click" || e.button) return;
+  const now = performance.now(); if(now - lastClick < 250) return; lastClick = now;
+  advance();
+});
+
+// Scroll back to the start of the card (counter + card) if the page is currently scrolled past it.
+function toCardTop(){ const m = $("meta"); if(m.getBoundingClientRect().top < 0) m.scrollIntoView({block:"start"}); }
+$("toTop").onclick = e => { e.target.blur(); window.scrollTo({top:0, behavior:"smooth"}); };
+
+// ---- Drill flow: space starts, space finishes, esc skips ----
+function setHint(){
+  const k = S.ctl === "click" ? "click the card" : "press <kbd>space</kbd>";
+  $("hint").innerHTML = state === "idle" ? `${k} to reveal it and start the clock`
+    : state === "reading" ? `${k} when you finish reading`
+    : `${k} for the next card · <kbd>esc</kbd> skips any time` + (S.ctl === "click" ? " · <kbd>space</kbd> also works" : "");
+}
+function setState(s){
+  state = s; $("card").classList.toggle("idle", s === "idle"); $("res").hidden = s !== "done";
+  setHint();
+  if(s !== "reading"){ clearInterval(tick); }
+}
+async function loadCard(){
+  const id = ++loadId; setState("idle"); $("timer").textContent = ""; loading = true;
+  const c = await getCard(S.len); if(id !== loadId) return false;
+  loading = false; card = c; card.words = countWords(c); renderCard(); toCardTop(); return true;
+}
+const wpmOf = h => h.w / (h.ms / 60000);
+function updateStats(){
+  $("reset").hidden = !H.length;
+  if(!H.length){ $("sess").textContent = "no cards read yet"; return; }
+  const w = H.reduce((a,h) => a + h.w, 0), m = H.reduce((a,h) => a + h.ms, 0) / 60000;
+  $("sess").textContent = `avg ${Math.round(w/m)} wpm · best ${Math.round(Math.max(...H.map(wpmOf)))} wpm · ${H.length} card${H.length > 1 ? "s" : ""}`;
+}
+function finish(){
+  const ms = performance.now() - t0, h = {w:card.words, ms}; H.push(h); H = H.slice(-200); store.set("spread.history", H);
+  $("rWpm").textContent = Math.round(wpmOf(h)); $("rWords").textContent = h.w; $("rTime").textContent = (ms/1000).toFixed(1);
+  $("recent").textContent = "recent: " + H.slice(-8).reverse().map(x => Math.round(wpmOf(x))).join(" · ");
+  setState("done"); updateStats();
+}
+function advance(){
+  if(!card || loading) return;
+  if(state === "idle"){
+    setState("reading"); t0 = performance.now(); toCardTop();
+    tick = setInterval(() => $("timer").textContent = ((performance.now() - t0) / 1000).toFixed(1) + "s", 100);
+  } else if(state === "reading") finish();
+  else loadCard(); // next card loads blurred; the following click reveals it and starts the clock
+}
+document.addEventListener("keydown", e => {
+  if(e.target.matches("input[type=number],select")) return;
+  if(e.code === "Space"){ e.preventDefault(); if(!e.repeat) advance(); }
+  else if(e.key === "Escape") loadCard();
+});
+
+// ---- Uploaded Verbatim files: parse .docx in the browser ----
+// Card = Heading 4 (tag) → first paragraph containing a digit (cite) → body until the next Heading 1-4.
+// Highlighted = run has w:highlight (or a character style that does). Same rules as verbatim-parser.
+const W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+let LIB = [], UP = [], FILES = 0, SEEN = new Set(), CACHE = {}, docId = 0, loadingDoc = false, warn = "";
+const hlOf = el => { const h = el && el.getElementsByTagNameNS(W, "highlight")[0], v = h && h.getAttributeNS(W, "val"); return v && v !== "none" ? v : ""; };
+async function parseDocx(file){
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const xml = async n => { const f = zip.file(n); return f ? new DOMParser().parseFromString(await f.async("string"), "application/xml") : null; };
+  const doc = await xml("word/document.xml"), sty = await xml("word/styles.xml");
+  if(!doc) throw new Error("not a Word document");
+  const kids = (el, n) => el ? [...el.children].find(c => c.localName === n) : undefined;
+  const styles = {};
+  if(sty) for(const s of sty.getElementsByTagNameNS(W, "style")){
+    const nm = kids(s, "name"), bo = kids(s, "basedOn"), rpr = kids(s, "rPr");
+    styles[s.getAttributeNS(W, "styleId")] = {name:(nm ? nm.getAttributeNS(W, "val") : "").toLowerCase(), basedOn:bo ? bo.getAttributeNS(W, "val") : "", rpr, hl:hlOf(rpr)};
+  }
+  const rd = sty && sty.getElementsByTagNameNS(W, "rPrDefault")[0], defRpr = rd && kids(rd, "rPr");
+  const sp = sty && sty.getElementsByTagNameNS(W, "pPrDefault")[0], spc = sp && sp.getElementsByTagNameNS(W, "spacing")[0];
+  const gap = spc && spc.getAttributeNS(W, "after") ? +spc.getAttributeNS(W, "after") / 20 : 8; // paragraph spacing in pt
+  const level = p => {
+    const ps = p.getElementsByTagNameNS(W, "pStyle")[0]; if(!ps) return 0;
+    const id = ps.getAttributeNS(W, "val"), m = ((styles[id] && styles[id].name) || id).toLowerCase().match(/^heading ?([1-4])$/);
+    return m ? +m[1] : 0;
+  };
+  // Effective run formatting, in Word's order: direct run props, character style, paragraph style, document defaults.
+  const on = el => !["0", "false"].includes(el.getAttributeNS(W, "val"));
+  const resolve = (rp, rsId, psId) => {
+    const chain = rp ? [rp] : [];
+    for(const start of [rsId, psId]) for(let id = start, n = 0; id && styles[id] && n < 8; id = styles[id].basedOn, n++) if(styles[id].rpr) chain.push(styles[id].rpr);
+    if(defRpr) chain.push(defRpr);
+    const first = n => { for(const c of chain){ const e = kids(c, n); if(e) return e; } };
+    const sz = first("sz"), b = first("b"), i = first("i"), u = first("u"), bd = first("bdr");
+    return {pt:sz ? +sz.getAttributeNS(W, "val") / 2 : 11, b:!!b && on(b), i:!!i && on(i), u:!!u && u.getAttributeNS(W, "val") !== "none", box:!!bd && bd.getAttributeNS(W, "val") !== "none"};
+  };
+  const read = p => {
+    const pe = p.getElementsByTagNameNS(W, "pStyle")[0], psId = pe ? pe.getAttributeNS(W, "val") : "";
+    let text = "", ranges = [], bold = [], runs = [];
+    for(const r of p.getElementsByTagNameNS(W, "r")){
+      let t = "";
+      for(const c of r.childNodes){ if(c.localName === "t") t += c.textContent; else if(c.localName === "tab" || c.localName === "br") t += " "; }
+      if(!t) continue;
+      const rp = kids(r, "rPr"), rs = kids(rp, "rStyle"), rsId = rs ? rs.getAttributeNS(W, "val") : "";
+      let hl = hlOf(rp); if(!hl && styles[rsId]) hl = styles[rsId].hl;
+      const f = resolve(rp, rsId, psId), s = text.length; text += t;
+      runs.push({s, e:text.length, hl, ...f});
+      if(hl) ranges.push([s, text.length, hl]); if(f.b) bold.push([s, text.length]);
+    }
+    return {text, ranges, bold, runs};
+  };
+  const out = []; let cur = null;
+  const flush = () => {
+    if(cur && cur.cite && cur.paras.length && cur.paras.map(p => p.text).join("").length >= 25){
+      const c = {tag:cur.tag, cite:cur.cite.text, citeBold:cur.cite.bold, citeRuns:cur.cite.runs, paras:cur.paras.map(p => ({text:p.text, ranges:p.ranges, runs:p.runs})), gap, fmt:true, src:file.name};
+      c.words = countWords(c); if(c.words >= 10) out.push(c);
+    }
+    cur = null;
+  };
+  for(const p of doc.getElementsByTagNameNS(W, "p")){
+    const lvl = level(p), para = read(p);
+    if(lvl){ flush(); if(lvl === 4 && para.text.trim()) cur = {tag:para.text.trim().replace(/^[,\s]+|[,\s]+$/g, ""), cite:null, paras:[]}; continue; }
+    if(!cur || !para.text.trim()) continue;
+    if(!cur.cite){ if(/\d/.test(para.text)) cur.cite = para; } else cur.paras.push(para);
+  }
+  flush(); return out;
+}
+let srcNote = "";
+function setSrc(){
+  $("clr").hidden = !UP.length;
+  const lead = S.doc === "upload" ? `${LIB.length} cards from ${FILES} file${FILES > 1 ? "s" : ""}. ` : `${LIB.length} cards. `;
+  $("src").textContent = loadingDoc ? "loading document…" : (LIB.length ? lead + srcNote : srcNote) + (warn ? " " + warn : "") || "Use upload .docx (or drop a file anywhere) to add your own cards.";
+  $("mode").textContent = LIB.length ? "Cards are parsed in your browser; uploaded files are not sent anywhere." : API_BASE ? "Backend: " + API_BASE : "Demo mode: generated filler text, not real evidence.";
+}
+function buildMenu(){
+  const sel = $("doc"); sel.textContent = "";
+  const add = (v, t) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.append(o); };
+  for(const d of DOCS) add(d.id, d.name);
+  add("upload", "Custom (uploaded doc)");
+  sel.value = S.doc;
+}
+// Switch the card source: a built-in document (fetched once, then cached), your uploads, or the demo text.
+async function selectDoc(id){
+  const my = ++docId; loadingDoc = false; S.doc = id; SEEN.clear(); srcNote = ""; warn = ""; store.set("spread.settings", S); $("doc").value = id;
+  if(id === "upload") LIB = UP;
+  else{
+    const d = DOCS.find(x => x.id === id);
+    if(!CACHE[id]){
+      loadingDoc = true; LIB = []; card = null; clearInterval(tick); setState("idle"); setSrc();
+      try{
+        const r = await fetch(d.file); if(!r.ok) throw new Error("HTTP " + r.status);
+        const seen = new Set();
+        CACHE[id] = (await parseDocx(new File([await r.arrayBuffer()], d.id + ".docx"))).filter(c => { const k = c.tag + c.cite.trim().slice(0, 40); return !seen.has(k) && seen.add(k); });
+        if(!CACHE[id].length) throw new Error("no cards");
+      }catch(e){
+        delete CACHE[id];
+        if(my === docId){ loadingDoc = false; LIB = []; warn = "Couldn't load that document, so this is placeholder text. Pick another or upload your own."; setSrc(); loadCard(); }
+        return;
+      }
+      if(my !== docId) return;
+      loadingDoc = false;
+    }
+    LIB = CACHE[id];
+  }
+  setSrc(); loadCard();
+}
+function pickLib(target){
+  let pool;
+  if(target < 0){
+    pool = LIB.filter(c => c.words <= -target);
+    if(pool.length) srcNote = `${pool.length} with ${-target} words or fewer.`;
+    else{ pool = [...LIB].sort((a, b) => a.words - b.words).slice(0, 3); srcNote = `None with ${-target} words or fewer, using the shortest.`; }
+  }else{
+    pool = target ? LIB.filter(c => Math.abs(c.words - target) <= target * .25) : LIB;
+    if(!target) srcNote = "Any length.";
+    else if(pool.length) srcNote = `${pool.length} within ±25% of ${target} words.`;
+    else{ pool = [...LIB].sort((a, b) => Math.abs(a.words - target) - Math.abs(b.words - target)).slice(0, 5); srcNote = `None near ${target} words, using the closest.`; }
+  }
+  let fresh = pool.filter(c => !SEEN.has(c));
+  if(!fresh.length){ pool.forEach(c => SEEN.delete(c)); fresh = pool; }
+  const c = fresh[Math.random() * fresh.length | 0]; SEEN.add(c); setSrc(); return c;
+}
+async function addFiles(files){
+  $("src").textContent = "reading…"; let bad = 0, err = "";
+  const seen = new Set(UP.map(c => c.tag + c.cite.trim().slice(0, 40)));
+  for(const f of files){
+    if(!/\.docx$/i.test(f.name)){ bad++; continue; }
+    try{
+      const cs = (await parseDocx(f)).filter(c => { const k = c.tag + c.cite.trim().slice(0, 40); return !seen.has(k) && seen.add(k); });
+      if(cs.length){ UP.push(...cs); FILES++; } else bad++;
+    }catch(e){ bad++; err = typeof JSZip === "undefined" ? "Couldn't load the Word reader." : ""; }
+  }
+  const msg = err || (bad ? `${bad} file${bad > 1 ? "s" : ""} had no usable cards (needs Tag/Heading 4 tags, a cite with a year, and highlighting).` : "");
+  if(UP.length) S.doc = "upload";
+  buildMenu(); await selectDoc(S.doc); warn = msg; setSrc();
+}
+
+// ---- Wire up controls ----
+document.querySelectorAll("#ctl .chip").forEach(b => b.onclick = () => { S.ctl = b.dataset.m; b.blur(); applySettings(); });
+document.querySelectorAll("#layout .chip").forEach(b => b.onclick = () => { S.layout = b.dataset.v; b.blur(); applySettings(); });
+document.querySelectorAll("#paper .chip").forEach(b => b.onclick = () => { S.paper = b.dataset.p; b.blur(); applySettings(); });
+$("up").onclick = e => { e.target.blur(); $("file").click(); };
+$("file").onchange = e => { addFiles([...e.target.files]); e.target.value = ""; };
+$("clr").onclick = e => { UP = []; FILES = 0; e.target.blur(); if(S.doc === "upload") S.doc = "econ"; buildMenu(); selectDoc(S.doc); };
+$("doc").onchange = e => { selectDoc(e.target.value); e.target.blur(); };
+document.addEventListener("dragover", e => e.preventDefault());
+document.addEventListener("drop", e => { e.preventDefault(); if(e.dataTransfer.files.length) addFiles([...e.dataTransfer.files]); });
+for(const n of LENS){
+  const b = document.createElement("button"); b.className = "chip"; b.dataset.n = n; b.textContent = n < 0 ? "≤" + -n : n || "any";
+  b.onclick = () => { S.len = n; b.blur(); applySettings(); loadCard(); }; $("lens").append(b);
+}
+for(const [k,v] of Object.entries(FONTS)){ const o = document.createElement("option"); o.value = k; o.textContent = v[0]; $("font").append(o); }
+$("font").onchange = e => { S.font = e.target.value; applySettings(); e.target.blur(); };
+$("size").oninput = e => { S.size = +e.target.value; applySettings(); };
+for(const [k,label] of SWATCHES){ const c = WORD[k], b = document.createElement("button"); b.className = "sw"; b.dataset.c = c; b.style.background = c;
+  b.title = label; b.setAttribute("aria-label", "Highlight " + label); b.onclick = () => { S.hl = c; b.blur(); applySettings(); }; $("hlg").append(b); }
+let armT;
+$("reset").onclick = e => {
+  const b = e.target;
+  if(b.dataset.arm){ clearTimeout(armT); delete b.dataset.arm; b.textContent = "clear runs"; H = []; store.set("spread.history", H); $("res").hidden = true; updateStats(); b.blur(); return; }
+  b.dataset.arm = "1"; b.textContent = "click again to clear all runs";
+  armT = setTimeout(() => { delete b.dataset.arm; b.textContent = "clear runs"; }, 3000);
+};
+buildMenu(); setSrc(); applySettings(); updateStats(); selectDoc(S.doc);
+</script>
+</body>
+</html>
