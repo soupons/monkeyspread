@@ -343,18 +343,25 @@ async function parseDocx(file){
   const doc = await xml("word/document.xml"), sty = await xml("word/styles.xml");
   if(!doc) throw new Error("not a Word document");
   const kids = (el, n) => el ? [...el.children].find(c => c.localName === n) : undefined;
+  const outlineOf = pp => { const o = kids(pp, "outlineLvl"); return o ? +o.getAttributeNS(W, "val") : null; };
   const styles = {};
   if(sty) for(const s of sty.getElementsByTagNameNS(W, "style")){
     const nm = kids(s, "name"), bo = kids(s, "basedOn"), rpr = kids(s, "rPr");
-    styles[s.getAttributeNS(W, "styleId")] = {name:(nm ? nm.getAttributeNS(W, "val") : "").toLowerCase(), basedOn:bo ? bo.getAttributeNS(W, "val") : "", rpr, hl:hlOf(rpr)};
+    styles[s.getAttributeNS(W, "styleId")] = {name:(nm ? nm.getAttributeNS(W, "val") : "").toLowerCase(), basedOn:bo ? bo.getAttributeNS(W, "val") : "", rpr, hl:hlOf(rpr), outline:outlineOf(kids(s, "pPr"))};
   }
   const rd = sty && sty.getElementsByTagNameNS(W, "rPrDefault")[0], defRpr = rd && kids(rd, "rPr");
   const sp = sty && sty.getElementsByTagNameNS(W, "pPrDefault")[0], spc = sp && sp.getElementsByTagNameNS(W, "spacing")[0];
   const gap = spc && spc.getAttributeNS(W, "after") ? +spc.getAttributeNS(W, "after") / 20 : 8; // paragraph spacing in pt
+  // Headings are found the way Word's navigation pane finds them: by outline level (0 = Pocket, 1 = Hat, 2 = Block, 3 = Tag).
+  // The level can sit on the paragraph itself (files pasted without styles), on its style, or on a style it is based on.
+  // A card starts only at a Tag whose level is set directly or by its own style. A style that merely inherits it (like Analytic)
+  // still ends the previous card but does not start a new one.
   const level = p => {
-    const ps = p.getElementsByTagNameNS(W, "pStyle")[0]; if(!ps) return 0;
-    const id = ps.getAttributeNS(W, "val"), m = ((styles[id] && styles[id].name) || id).toLowerCase().match(/^heading ?([1-4])$/);
-    return m ? +m[1] : 0;
+    const pp = kids(p, "pPr"), ps = kids(pp, "pStyle"), id = ps ? ps.getAttributeNS(W, "val") : "";
+    let o = outlineOf(pp), own = o !== null;
+    if(o === null) for(let k = id, n = 0; k && styles[k] && n < 8; k = styles[k].basedOn, n++) if(styles[k].outline !== null){ o = styles[k].outline; own = k === id; break; }
+    if(o === null){ const m = ((styles[id] && styles[id].name) || id).toLowerCase().match(/^heading ?([1-4])$/); return m ? {lvl:+m[1], card:+m[1] === 4} : {lvl:0}; }
+    return o > 3 ? {lvl:0} : {lvl:o + 1, card:o === 3 && own};
   };
   // Effective run formatting, in Word's order: direct run props, character style, paragraph style, document defaults.
   const on = el => !["0", "false"].includes(el.getAttributeNS(W, "val"));
@@ -390,8 +397,8 @@ async function parseDocx(file){
     cur = null;
   };
   for(const p of doc.getElementsByTagNameNS(W, "p")){
-    const lvl = level(p), para = read(p);
-    if(lvl){ flush(); if(lvl === 4 && para.text.trim()) cur = {tag:para.text.trim().replace(/^[,\s]+|[,\s]+$/g, ""), cite:null, paras:[]}; continue; }
+    const {lvl, card} = level(p), para = read(p);
+    if(lvl){ flush(); if(card && para.text.trim()) cur = {tag:para.text.trim().replace(/^[,\s]+|[,\s]+$/g, ""), cite:null, paras:[]}; continue; }
     if(!cur || !para.text.trim()) continue;
     if(!cur.cite){ if(/\d/.test(para.text)) cur.cite = para; } else cur.paras.push(para);
   }
